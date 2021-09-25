@@ -1,7 +1,7 @@
 # PHYS449 Machine Learning in Physics
 
-- name: *your name*
-- student ID: *your student ID*
+- name: Hin Pok Cyrus Fung
+- student ID: 20768095
 
 ## Instructions
 
