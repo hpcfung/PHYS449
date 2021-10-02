@@ -52,12 +52,12 @@ def update_per_sample(lastW,I,J):
     prediction = np.dot(lastW,P[J,:])
     return alpha*(Input[J,num_cols-1] - prediction)*P[J,I]
 
-xline = [W[0]]
-yline = [W[1]]
-zline = [W[2]]
-xline1 = [W[0]]
-yline1 = [W[1]]
-zline1 = [W[2]]
+#xline = [W[0]]
+#yline = [W[1]]
+#zline = [W[2]]
+#xline1 = [W[0]]
+#yline1 = [W[1]]
+#zline1 = [W[2]]
 
 for k in range(N):
     W_last_iteration = W
@@ -66,27 +66,27 @@ for k in range(N):
         for j in range(num_rows): #loop over samples
             delta = delta + update_per_sample(W_last_iteration,i,j)
         W[i] = W[i] + delta
-    xline1.append(W[0])
-    yline1.append(W[1])
-    zline1.append(W[2])
+    #xline1.append(W[0])
+    #yline1.append(W[1])
+    #zline1.append(W[2])
     if k + 1 < 20:
         print(f"iteration {k + 1}: {W}")
-        xline.append(W[0])
-        yline.append(W[1])
-        zline.append(W[2])
+        #xline.append(W[0])
+        #yline.append(W[1])
+        #zline.append(W[2])
     else:
         if k + 1 < 10000:
             if (k + 1) % 1000 == 0:
                 print(f"iteration {k + 1}: {W}")
-                xline.append(W[0])
-                yline.append(W[1])
-                zline.append(W[2])
+                #xline.append(W[0])
+                #yline.append(W[1])
+                #zline.append(W[2])
         else:
             if (k + 1) % 10000 == 0:
                 print(f"iteration {k + 1}: {W}")
-                xline.append(W[0])
-                yline.append(W[1])
-                zline.append(W[2])
+                #xline.append(W[0])
+                #yline.append(W[1])
+                #zline.append(W[2])
 
 def gd_plot(): #can be used to plot the history of gradient descent if the input dimension is 2
     fig = plt.figure()
