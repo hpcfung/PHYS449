@@ -4,6 +4,7 @@
 
 import torch as T
 import numpy as np
+import matplotlib.pyplot as plt
 from torch import nn
 
 #print(torch.cuda.is_available())
@@ -17,7 +18,7 @@ device = T.device("cpu")
 hidden_layer_width = 200
 learning_rate = 1e-3
 batch_size = 26492
-epochs = 20
+epochs = 5
 
 class DigitsDataset(T.utils.data.Dataset):
 
@@ -117,3 +118,28 @@ for t in range(epochs):
     train_loop(train_dataloader, model, loss_fn, optimizer)
     test_loop(test_dataloader, model, loss_fn)
 print("Done!")
+
+def prediction(input_tensor):
+  logits = model(input_tensor)
+  pred_probab = nn.Softmax()(logits) #dim=1
+  y_pred = pred_probab.argmax()*2 #1
+  return y_pred.tolist()
+
+Input = np.loadtxt("even_mnist.csv")
+
+figure = plt.figure(figsize=(8, 8))
+cols, rows = 5, 3
+for n in range(15):
+    sample = Input[n, 0:197]
+    picture_as_array = []
+    picture = np.zeros([14, 14], int)
+    for i in range(196):
+        picture[i // 14, i % 14] = sample[i]
+        picture_as_array.append(sample[i])
+    figure.add_subplot(rows, cols, n+1)
+    picture_as_tensor = T.tensor(np.array(picture_as_array)).to(device)
+    title = str(prediction(picture_as_tensor.float()))+" (actual: "+str(round(sample[196]))+")"
+    plt.title(title)
+    plt.axis("off")
+    plt.imshow(np.array(picture), cmap="gray")
+plt.show()
