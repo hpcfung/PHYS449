@@ -4,6 +4,8 @@
 
 - json
 - numpy
+- torch
+- matplotlib
 
 ## Running `main.py`
 
