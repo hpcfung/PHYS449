@@ -10,5 +10,5 @@
 To run `main.py`, use
 
 ```sh
-python main.py
+python main.py param/param_file_name.json
 ```
