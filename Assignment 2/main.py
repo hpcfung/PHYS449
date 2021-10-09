@@ -2,23 +2,15 @@
 #https://pytorch.org/tutorials/beginner/basics/intro.html
 #https://visualstudiomagazine.com/articles/2020/09/10/pytorch-dataloader.aspx
 
-import argparse
 import numpy as np
 import torch as T
-import matplotlib.pyplot as plt
 from torch import nn
 import json
 import sys
 
 if __name__ == '__main__':
-    #reading hyperparameters from the json file
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-p")
-    parser.add_argument('-v', type=int)
-    args = parser.parse_args()
 
-    g = open(args.p, ) #sys.argv[1]
-    #g = open('param_file_name.json',)
+    g = open(sys.argv[1], )
     data = json.load(g)
     print(data)
     hidden_layer_width1 = data['hidden_layer_width1']
@@ -34,7 +26,7 @@ if __name__ == '__main__':
     class DigitsDataset(T.utils.data.Dataset):
 
         def __init__(self, src_file, TEST):
-            if TEST == True:  # use random split?
+            if TEST == True:
                 x_tmp = np.loadtxt(src_file, max_rows=3000, usecols=range(0, 196))
                 y_tmp = np.loadtxt(src_file, max_rows=3000, usecols=196)
             else:
@@ -45,15 +37,11 @@ if __name__ == '__main__':
             self.y_data = T.tensor(y_tmp).to(device)
 
         def __len__(self):
-            return len(self.x_data)  # required
+            return len(self.x_data)
 
         def __getitem__(self, idx):
-            # if T.is_tensor(idx):
-            #  idx = idx.tolist()
             img = self.x_data[idx, 0:196]
             dgt = T.div(self.y_data[idx], 2, rounding_mode='floor')
-            # sample = \
-            #  { 'image' : img, 'digit' : dgt }
             return img.float(), dgt.long()
 
 
@@ -141,7 +129,6 @@ if __name__ == '__main__':
     for t in range(epochs):
         print(f"Epoch {t + 1}\n-------------------------------")
         train_loop(train_dataloader, model, loss_fn, optimizer)
-        #print()
     print("Training complete")
     print(f"-------------------------------------------------------------------------------")
     print(f"Final test")
