@@ -6,6 +6,7 @@
 - numpy
 - torch
 - matplotlib
+- argparse
 
 ## Running `main.py`
 
