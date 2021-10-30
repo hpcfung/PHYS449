@@ -2,8 +2,12 @@
 
 ## Dependencies
 
-- json
 - numpy
+- matplotlib
+- torch
+- json
+- argparse
+- sys
 
 ## Running `main.py`
 
