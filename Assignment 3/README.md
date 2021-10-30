@@ -7,7 +7,7 @@
 
 ## Running `main.py`
 
-To run `main.py`, use
+Note that param.json should be placed inside the param folder. To run `main.py`, use
 
 ```sh
 python main.py
