@@ -270,5 +270,5 @@ if __name__ == '__main__':
     name = str(N)
     plt.title("Neural DE solutions, " + name + " epochs")
     plt.savefig(res_path+'.pdf')
-
+    print(f"Test plot generated")
     plt.show()
