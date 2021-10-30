@@ -1,0 +1,27 @@
+{
+	"ode":{
+		"T": 7,
+		"solution steps": 500,
+		"step size in training data": 25
+	},
+	"scale factors":{
+		"IC bounds scale factor": 2,
+		"plot scale factor": 2
+	},
+	"grid sizes":{
+		"plot grid size": 20,
+		"IC grid size": 12
+	},
+	"optim":{
+		"number of epochs": 1500,
+		"learning rate": 1e-3
+	},
+	"model":{
+		"hidden layer 1 width": 100,
+		"hidden layer 2 width": 100,
+		"hidden layer 3 width": 100
+	},
+	"testing":{
+		"ICs tested": 10
+	}
+}
