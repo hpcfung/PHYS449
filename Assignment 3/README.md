@@ -12,7 +12,7 @@ To run `main.py`, use
 ```sh
 python main.py
 ```
-
+Note that the output plot is displayed immediately and is also saved as a pdf.
 ## json arguments
 
 - T: the neural network solves the DE from t = 0 to t = T
