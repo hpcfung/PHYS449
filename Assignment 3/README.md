@@ -40,3 +40,6 @@ model
 - hidden layer 1 width: number of neurons in the first hidden layer
 - hidden layer 2 width: number of neurons in the second hidden layer
 - hidden layer 3 width: number of neurons in the third hidden layer
+--------------------------------------------------------------------------------------------------------------------------------------
+testing
+- ICs tested: number of solutions tested when calculating the testing loss
