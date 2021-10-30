@@ -16,6 +16,12 @@ eg
 ```sh
 python main.py --param param/param.json -v 2 --res-path plots --x-field "-y/np.sqrt(x**2 + y**2)" --y-field "x/np.sqrt(x**2 + y**2)" --lb -1.0 --ub 1.0 --n-tests 3
 ```
+
+or
+```sh
+python main.py --param param/param.json -v 2 --res-path plots --x-field "np.sin(np.pi*x) + np.sin(np.pi*y)" --y-field "np.cos(np.pi*y)" --lb -1.0 --ub 1.0 --n-tests 3
+```
+
 Note that the output plot is displayed immediately and is also saved as a pdf.
 ## json arguments
 
