@@ -10,7 +10,11 @@
 Note that `param.json` should be placed inside the `param` folder. To run `main.py`, use
 
 ```sh
-python main.py
+python main.py [--param param.json] [-v N] [--res-path results] [--x-field x**2] [--y-field y**2] [--lb LB] [--ub UB] [--n-tests N_TESTS]
+```
+eg
+```sh
+python main.py --param param/param.json -v 2 --res-path plots --x-field "-y/np.sqrt(x**2 + y**2)" --y-field "x/np.sqrt(x**2 + y**2)" --lb -1.0 --ub 1.0 --n-tests 3
 ```
 Note that the output plot is displayed immediately and is also saved as a pdf.
 ## json arguments
