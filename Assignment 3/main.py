@@ -174,10 +174,6 @@ if __name__ == '__main__':
                 nn.LeakyReLU(),
                 nn.Linear(hidden_layer_width2, hidden_layer_width3),
                 nn.LeakyReLU(),
-                # nn.Linear(hidden_layer_width3, hidden_layer_width4),
-                # nn.LeakyReLU(),
-                # nn.Linear(hidden_layer_width4, hidden_layer_width5),
-                # nn.LeakyReLU(),
                 nn.Linear(hidden_layer_width3, 2),
             )
 
