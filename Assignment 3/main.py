@@ -48,7 +48,8 @@ if __name__ == '__main__':
     IC_upper_bound = args.ub
 
     res_path = args.res_path
-    NUM_test = args.n_tests
+    NUM_plot = args.n_tests
+
 
     # read json file
     g = open(param_path)
@@ -63,30 +64,32 @@ if __name__ == '__main__':
         print(f"model: {data['model']}")
         print()
 
+
     # ode parameters
     T = data['ode']['T']
     solution_steps = data['ode']['solution steps']
-    step_size_in_training_data = data['ode']['step size in training data']
 
-    training_sol_steps = int(solution_steps/step_size_in_training_data)
-    time_step = T / solution_steps
+    dt = T / solution_steps
 
     # scale factors
-    IC_factor = data['scale factors']['IC bounds scale factor']
+    training_factor = data['scale factors']['training grid scale factor']
     scale_factor = data['scale factors']['plot scale factor']
 
     lower_bound = IC_lower_bound*scale_factor
     upper_bound = IC_upper_bound*scale_factor
+    train_lb = IC_lower_bound*training_factor
+    train_ub = IC_upper_bound*training_factor
 
     # grid sizes
     plot_grid_size = data['grid sizes']['plot grid size']
-    IC_grid_size = data['grid sizes']['IC grid size']
+    training_grid_size = data['grid sizes']['training grid size']
 
-    num_sol = IC_grid_size**2
+    num_train = training_grid_size**2
 
     # optim parameters
-    N = data['optim']['number of epochs'] 
-    learning_rate = data['optim']['learning rate']  
+    N = data['optim']['number of epochs']
+    learning_rate = data['optim']['learning rate']
+    batch_size = data['optim']['batch size']
 
     # model parameters
     hidden_layer_width1 = data['model']['hidden layer 1 width']
@@ -94,21 +97,44 @@ if __name__ == '__main__':
     hidden_layer_width3 = data['model']['hidden layer 3 width']
 
     # testing parameters
-    num_test = data['testing']['ICs tested']
-    if verbosity==2:
-        TEST_IC = np.random.uniform(low=IC_lower_bound, high=IC_upper_bound, size=(num_test,2))
-        TEST_input = torch.tensor(np.array(TEST_IC, dtype=np.float32)).to(device)
+    num_test = data['testing']['number of points tested']
 
-    # initialize solutions and initial conditions arrays
-    sol_set = np.zeros((num_sol,training_sol_steps,2), dtype=np.float32)
-    IC_set = np.zeros((num_sol,2), dtype=np.float32)
+    # given a point on the vector field, the neural network tells us what the next point should be
+    # ie x0 + u*dt, y0 + v*dt
+    # however for numerical stability, we do not use the neural network to output this directly
+    # since x0 + u*dt is very close to x0
+    # instead we focus on dx = u*dt
+    # in fact since u*dt is very small, we focus on u
+    # we scale the output of the neural network by dt
+    # instead of using the neural network to predict u*dt directly
+    def train_next_step(x0,y0):
+        return np.float32(u(x0,y0)), np.float32(v(x0,y0))
 
-    # if verbosity = 2, we also calculate the test error
-    # initialize test solutions
-    if verbosity==2:
-        Test_set = np.zeros((num_test,training_sol_steps,2), dtype=np.float32)
+    # create a list of ICs and their corresponding "next point" for use in training
+    IC_set = np.zeros((num_train, 2), dtype=np.float32)
+    out_set = np.zeros((num_train, 2), dtype=np.float32)
 
-    # plots vector field and prepares vector field for generating the training set
+    counter = 0
+    for J in np.linspace(train_lb, train_ub, training_grid_size):
+        for K in np.linspace(train_lb, train_ub, training_grid_size):
+            IC_set[counter, 0] = np.float32(J)
+            IC_set[counter, 1] = np.float32(K)
+            out_set[counter, 0], out_set[counter, 1] = train_next_step(J,K)
+            counter += 1
+
+    # if verbosity = 2, we also prepare a test dataset
+    if verbosity == 2:
+        _Test_set = np.random.uniform(low=IC_lower_bound, high=IC_upper_bound, size=(num_test,2))
+        Test_set = np.array(_Test_set, dtype=np.float32)
+        Test_out_set = np.zeros((num_test,2))
+        TEST_set = torch.tensor(Test_set).to(device)
+        for J in range(num_test):
+            Test_out_set[J, 0], Test_out_set[J, 1] = train_next_step(Test_set[J,0],Test_set[J,1])
+        TEST_out_set = torch.tensor(Test_out_set).to(device)
+        print("Testing set generated\n")
+
+
+    # plots vector field
     def plot_vector_field(u, v):
         X, Y = np.meshgrid(np.linspace(lower_bound, upper_bound, plot_grid_size),
                            np.linspace(lower_bound, upper_bound, plot_grid_size))
@@ -121,78 +147,20 @@ if __name__ == '__main__':
 
         plt.quiver(X, Y, U, V)
 
-    # one iteration of 4th order Runga-Kutta for generating the training set
-    def rk4(x0, y0, Delta_t, u, v):
-        k1x = u(x0, y0) * Delta_t
-        k1y = v(x0, y0) * Delta_t
-        k2x = u(x0 + k1x / 2, y0 + k1y / 2) * Delta_t
-        k2y = v(x0 + k1x / 2, y0 + k1y / 2) * Delta_t
-        k3x = u(x0 + k2x / 2, y0 + k2y / 2) * Delta_t
-        k3y = v(x0 + k2x / 2, y0 + k2y / 2) * Delta_t
-        k4x = u(x0 + k3x, y0 + k3y) * Delta_t
-        k4y = v(x0 + k3x, y0 + k3y) * Delta_t
-        return x0 + (k1x + 2 * k2x + 2 * k3x + k4x) / 6, y0 + (k1y + 2 * k2y + 2 * k3y + k4y) / 6
-
-    # generates training solution for the given initial condition
-    def solve_DE(u, v, init_x, init_y, index):
-        x_points_rk4 = [init_x]
-        y_points_rk4 = [init_y]
-
-        tmp = 0
-        for k in range(solution_steps+1):
-            last_x_rk4 = x_points_rk4[k]
-            last_y_rk4 = y_points_rk4[k]
-            new_x_rk4, new_y_rk4 = rk4(last_x_rk4, last_y_rk4, time_step, u, v)
-            x_points_rk4.append(new_x_rk4)
-            y_points_rk4.append(new_y_rk4)
-
-            if k%step_size_in_training_data==0 and k!=0:
-                sol_set[index, tmp, 0] = np.float32(new_x_rk4)
-                sol_set[index, tmp, 1] = np.float32(new_y_rk4)
-                tmp+=1
-
-    # generates testing solution
-    def gen_test(u, v, init_x, init_y, index):
-        x_points_rk4 = [init_x]
-        y_points_rk4 = [init_y]
-
-        tmp = 0
-        for k in range(solution_steps+1):
-            last_x_rk4 = x_points_rk4[k]
-            last_y_rk4 = y_points_rk4[k]
-            new_x_rk4, new_y_rk4 = rk4(last_x_rk4, last_y_rk4, time_step, u, v)
-            x_points_rk4.append(new_x_rk4)
-            y_points_rk4.append(new_y_rk4)
-
-            if k%step_size_in_training_data==0 and k!=0:
-                Test_set[index, tmp, 0] = np.float32(new_x_rk4)
-                Test_set[index, tmp, 1] = np.float32(new_y_rk4)
-                tmp+=1
-
-
-    # generates training set
     plot_vector_field(u, v)
-    counter = 0
-    for J in np.linspace(IC_lower_bound*IC_factor, IC_upper_bound*IC_factor, IC_grid_size):
-        for K in np.linspace(IC_lower_bound*IC_factor, IC_upper_bound*IC_factor, IC_grid_size):
-            IC_set[counter, 0] = np.float32(J)
-            IC_set[counter, 1] = np.float32(K)
-            solve_DE(u, v, J, K, counter)
-            counter += 1
-        print(f"{counter} training sequences generated")
 
-    print("Training set generated\n")
+    # defines training dataset
+    class TrainingDataset(torch.utils.data.Dataset):
 
-    # if verbosity = 2, this generates the testing set
-    if verbosity == 2:
-        TEST_set = torch.tensor(Test_set).to(device)
-        for J in range(num_test):
-            gen_test(u, v, TEST_IC[J,0], TEST_IC[J,1], J)
-        print("Testing set generated\n")
+        def __init__(self):
+            self.input_data = torch.tensor(IC_set).to(device)
+            self.output_data = torch.tensor(out_set).to(device)
 
-    # convert the array into a tensor
-    training_sol = torch.tensor(sol_set).to(device)
-    training_IC = torch.tensor(IC_set).to(device)
+        def __len__(self):
+            return num_train
+
+        def __getitem__(self, idx):
+            return self.input_data[idx,:], self.output_data[idx,:]
 
     # defines neural network used
     class NeuralNetwork(nn.Module):
@@ -206,70 +174,86 @@ if __name__ == '__main__':
                 nn.LeakyReLU(),
                 nn.Linear(hidden_layer_width2, hidden_layer_width3),
                 nn.LeakyReLU(),
-                nn.Linear(hidden_layer_width3, training_sol_steps*2),
+                # nn.Linear(hidden_layer_width3, hidden_layer_width4),
+                # nn.LeakyReLU(),
+                # nn.Linear(hidden_layer_width4, hidden_layer_width5),
+                # nn.LeakyReLU(),
+                nn.Linear(hidden_layer_width3, 2),
             )
 
         def forward(self, ICs):
-            raw_output = self.linear_relu_stack(ICs)
-            pred_x_list, pred_y_list = torch.split(raw_output, training_sol_steps)
-            return torch.stack([pred_x_list,pred_y_list],dim=-1)
+            return self.linear_relu_stack(ICs)
 
+    # initialize the training dataset and dataloader
+    train_dataset = TrainingDataset()
+    train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
-    #initializing the model, loss function, and optimizer
+    # initializing the model, loss function, and optimizer
     model = NeuralNetwork().to(device)
     loss_fcn = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
-    # if verbosity = 2, we also calculate the test error
-    if verbosity==2:
+    # we only calculate the test loss if verbosity = 2
+    if verbosity == 2:
         def test_loss():
-            loss = 0
-            for J in range(num_test):
-                output_seq = model(TEST_input[J, :])
-                loss += loss_fcn(output_seq, TEST_set[J, :, :])
-            return loss / num_test
+            Loss = 0
+            for K in range(num_test):
+                predicted_step = model(TEST_set[K,:])
+                Loss += loss_fcn(predicted_step, TEST_out_set[K,:])
+            return Loss/num_test
 
-    # training loop
-    for epoch in range(N):
-        optimizer.zero_grad()
+    # defines training loop
+    def train_loop(_epoch): #so previous assignmdent code wrong, so enumerate over dataloader, not dataset
+        for batch, (_x, _y) in enumerate(train_dataloader):
+            predicted_step = model(_x)
+            loss = loss_fcn(predicted_step, _y)
 
-        loss = 0
-        for J in range(num_sol):
-            output_seq = model(training_IC[J,:])
-            loss += loss_fcn(output_seq, training_sol[J,:,:])
-        loss = loss/num_sol
-        loss.backward()
-        optimizer.step()
-        if epoch % 50 == 0 or epoch == (N-1):
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
             if verbosity == 2:
-                print(f"epoch = {epoch}   training loss = {loss}   testing loss = {test_loss()}")
+                if batch == 0:
+                    print(f"epoch {epoch + 1}   training loss = {loss}   testing loss = {test_loss()}")
             else:
-                print(f"epoch = {epoch}   training loss = {loss}")
+                if _epoch % 5 == 0:
+                    if batch == 0:
+                        print(f"epoch {epoch + 1}   training loss = {loss}")
 
+
+    # training
+    for epoch in range(N):
+        train_loop(epoch)
     print("Training complete")
+
 
     # generates test plot
     def testing(c):
         test_IC = np.random.uniform(low=IC_lower_bound, high=IC_upper_bound, size=2)
-        test_input = torch.tensor(np.array(test_IC, dtype = np.float32)).to(device)
-        output_seq = model(test_input)
+        plot_x = [test_IC[0]]
+        plot_y = [test_IC[1]]
+        test_input = torch.tensor(np.array(test_IC, dtype=np.float32)).to(device)
 
-        output_seq_cpu = output_seq.cpu()
-        output_SEQ = output_seq_cpu.detach().numpy()
+        for I in range(solution_steps):
+            velocity = model(test_input)
+            test_output = test_input + velocity*dt
+            np_add_tuple = test_output.cpu().detach().numpy()
+            plot_x.append(np_add_tuple[0])
+            plot_y.append(np_add_tuple[1])
+            test_input = test_output
 
-        output_x = np.insert(output_SEQ[:,0],0,test_IC[0]) #add the IC to the plot
-        output_y = np.insert(output_SEQ[:,1],0,test_IC[1])
+        plt.plot(plot_x, plot_y, color=c)
+        plt.plot(test_IC[0], test_IC[1], marker='o', color=c)
 
-        plt.plot(output_x, output_y, linestyle='-', marker='o', markersize=2, color = c)
-        plt.plot(test_IC[0],test_IC[1], marker='o', color = c)
 
-    color_code = ['b','g','r','c','m','y','k'] # different colors for different test solutions
-    for J in range(NUM_test):
-        testing(color_code[J%7])
+    color_code = ['b', 'g', 'r', 'c', 'm', 'y', 'k']  # different colors for different test solutions
+    for J in range(NUM_plot):
+        testing(color_code[J % 7])
+
 
     name = str(N)
     plt.title("Neural DE solutions, " + name + " epochs")
-    plt.savefig(res_path+'.pdf')
+    plt.savefig(res_path + '.pdf')
     print()
     print(f"Test plot generated")
     plt.show()
