@@ -34,16 +34,17 @@ ode
 - solution steps: the number of steps used when generating the solutions
 --------------------------------------------------------------------------------------------------------------------------------------
 scale factors
-- IC bounds scale factor: when generating the training dataset, we consider solutions with initial conditions beyond the given bounds to improve the behavior of solutions near the boundary; scale the given bounds by this factor
+- training grid scale factor: when generating the training dataset, we consider solutions with initial conditions beyond the given bounds in case solution leaves the boundary; scale the given bounds by this factor
 - plot scale factor: plot a region larger than the initial conditions bounds (by this factor)
 --------------------------------------------------------------------------------------------------------------------------------------
 grid sizes
+- training grid size: the initial conditions for the training set are obtained on an n x n grid
 - plot grid size: plot the vector field on an n x n grid
-- IC grid size: the initial conditions for the training set are obtained from this n x n grid
 --------------------------------------------------------------------------------------------------------------------------------------
 optim
 - number of epochs: number of epochs used when training the neural network
 - learning rate: learning rate used in the Adam optimizer
+- batch size: batch size used in the dataloader
 --------------------------------------------------------------------------------------------------------------------------------------
 model
 - hidden layer 1 width: number of neurons in the first hidden layer
@@ -51,4 +52,4 @@ model
 - hidden layer 3 width: number of neurons in the third hidden layer
 --------------------------------------------------------------------------------------------------------------------------------------
 testing
-- ICs tested: number of solutions tested when calculating the testing loss
+- number of points tested: number of ICs tested when calculating the testing loss
