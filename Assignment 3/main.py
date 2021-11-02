@@ -199,7 +199,7 @@ if __name__ == '__main__':
             return Loss/num_test
 
     # defines training loop
-    def train_loop(_epoch): #so previous assignmdent code wrong, so enumerate over dataloader, not dataset
+    def train_loop(_epoch): 
         for batch, (_x, _y) in enumerate(train_dataloader):
             predicted_step = model(_x)
             loss = loss_fcn(predicted_step, _y)
