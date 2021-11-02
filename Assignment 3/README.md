@@ -31,8 +31,7 @@ Note that the output plot is displayed immediately and is also saved as a pdf.
 
 ode
 - T: the neural network solves the DE from t = 0 to t = T
-- solution steps: the number of steps used when generating the training dataset
-- step size in training data: choose a subset of the data generated as the training set (eg if step size = 25, we choose the 25th, 50th, 75th, etc)
+- solution steps: the number of steps used when generating the solutions
 --------------------------------------------------------------------------------------------------------------------------------------
 scale factors
 - IC bounds scale factor: when generating the training dataset, we consider solutions with initial conditions beyond the given bounds to improve the behavior of solutions near the boundary; scale the given bounds by this factor
