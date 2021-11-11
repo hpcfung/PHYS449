@@ -1,11 +1,20 @@
 import numpy as np
 import random
+import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
-    N = 100
+    N = 10
     learn_rate = 1 #1e-2
 
-    MC_run_num = 1000
+    # how many transitions we do in each MC run
+    MC_run_iterations = 100
+    # how many MC runs we do
+    MC_trial_num = 100
+
+    v = 2
+
+    # suggested = 1000 iterations, 100?
+    # 1000, 1000 gives [-0.556  0.468  0.386  0.462], pretty good
 
     raw_data = np.loadtxt('in.txt',dtype=str)
 
@@ -70,8 +79,8 @@ if __name__ == '__main__':
     train_prob = distribution/num_samples
     model_prob = np.zeros(state_space_size)
 
-    weights = np.array([-0.97482081,0.89636695,0.86760752,0.88467344])
-    #weights = np.zeros(mod_size)
+    # weights = np.array([-0.97482081,0.89636695,0.86760752,0.88467344])
+    weights = np.zeros(mod_size)
 
     # weights = np.random.uniform(low=-1.0,high=1.0,size=mod_size)
 
@@ -141,17 +150,26 @@ if __name__ == '__main__':
     def MC_run():
         initial_index = random.sample(range(state_space_size), k=1)[0]
         current_state = Omega[initial_index,:]
-        for L in range(MC_run_num):
+        for L in range(MC_run_iterations):
             current_state = next_state(current_state)
-            print(L, current_state)
+            # print(L, current_state)
         return current_state
 
-    def calc_MC_neg_phase(index):
-        corr = 0
-        for I in range(state_space_size):
-            corr += Omega[I, index] * Omega[I, (index+1) % mod_size] * model_prob[I]
+    def MC_neg_phase():
+        tmp_neg_phase = np.zeros(mod_size)
+        for I in range(MC_trial_num):
+            MC_state = MC_run()
+            for P in range(mod_size):
+                tmp_neg_phase[P] += MC_state[P] * MC_state[(P+1) % mod_size]
+            if v == 2:
+                address = 0
+                for _J in range(mod_size):
+                    address += con_to_digits(MC_state[mod_size - 1 - _J]) * (2 ** _J)
+                MC_distribution[address] += 1
+            # if I % 100 == 0:
+            #     print(I)
 
-        return corr
+        return tmp_neg_phase/MC_trial_num
 
 
     def update_neg_phase():
@@ -162,10 +180,20 @@ if __name__ == '__main__':
     def training_loop():
         global weights
         update_neg_phase()
-        step = pos_phase-neg_phase
+        # print(f"pos_phase = {pos_phase}")
+        NEG = MC_neg_phase()
+        # print(f"neg_phase = {NEG}")
+        step = pos_phase-NEG
         weights = weights + step*learn_rate
 
     def KL_div():
+        sum = 0
+        for S in range(state_space_size):
+            sum += train_prob[S]*np.log(train_prob[S]/MC_prob[S])
+        return sum
+
+    def correct_KL_div():
+        update_model_prob()
         sum = 0
         for S in range(state_space_size):
             sum += train_prob[S]*np.log(train_prob[S]/model_prob[S])
@@ -178,17 +206,39 @@ if __name__ == '__main__':
     # print(np.array([-0.53999949,  0.4659995,   0.43599949,  0.4539995]))
     # update_neg_phase()
     # print(neg_phase)
+    # print(calc_MC_neg_phase())
 
-    print(MC_run())
+    # add regularizer?
+
+    weight1_history = [weights[0]]
+    weight2_history = [weights[1]]
+    weight3_history = [weights[2]]
+    weight4_history = [weights[3]]
+    for L in range(N):
+
+        MC_distribution = np.zeros(state_space_size, dtype=int)
+        training_loop()
+        MC_prob = MC_distribution / MC_trial_num
+
+        weight1_history.append(weights[0])
+        weight2_history.append(weights[1])
+        weight3_history.append(weights[2])
+        weight4_history.append(weights[3])
+        # print(f"div = {KL_div()}   correct div = {correct_KL_div()}")
+        # print(model_prob)
+        # print(MC_prob)
 
 
-    # for L in range(N):
-    #     training_loop()
-    #     if L % 20 == 0:
-    #         print(f"N = {L}   {weights}   div = {KL_div()}")
-    #         print(f"pos_phase = {pos_phase}")
-    #         print(f"neg_phase = {neg_phase}")
-    #
-    # print(f"N = {N-1}   {weights}   div = {KL_div()}")  # div = {KL_div}
+        if L % 10 == 0:
+            print(f"N = {L}   {weights}")
+            # print()
+
+    # print(f"N = {N-1}   {weights}")  # div = {KL_div}
     # print(f"pos_phase = {pos_phase}")
     # print(f"neg_phase = {neg_phase}")
+    plt.plot(weight1_history, label = 'weight1')
+    plt.plot(weight2_history, label='weight2')
+    plt.plot(weight3_history, label='weight3')
+    plt.plot(weight4_history, label='weight4')
+    plt.legend(loc="best")
+    plt.show()
