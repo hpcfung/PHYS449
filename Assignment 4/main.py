@@ -1,8 +1,11 @@
 import numpy as np
+import random
 
 if __name__ == '__main__':
     N = 100
     learn_rate = 1 #1e-2
+
+    MC_run_num = 1000
 
     raw_data = np.loadtxt('in.txt',dtype=str)
 
@@ -21,8 +24,17 @@ if __name__ == '__main__':
         for J in range(mod_size):
             train_data[I,J]= translate_type(raw_data[I][J])
 
+    # this is the size of Omega
+    # eg 16 for the given dataset
     state_space_size = 2 ** mod_size
+
+    # Omega is the set of all possible inputs to the Boltzmann machine
+    # ie all possible states of the system
+    # each row represents a possible state
+    # so all possible states can be accessed by its row number in Omega
+    # eg 0 to 15 for the given dataset
     Omega = np.zeros((state_space_size, mod_size))
+
     distribution = np.zeros(state_space_size,dtype=int)
     train_prob = np.zeros(state_space_size)
 
@@ -56,11 +68,12 @@ if __name__ == '__main__':
     initialize_Omega()
     initialize_distribution()
     train_prob = distribution/num_samples
-    state_space_prob = np.zeros(state_space_size)
+    model_prob = np.zeros(state_space_size)
 
-    # weights = np.array([-0.5,0.5,0.5,0.5])
+    weights = np.array([-0.97482081,0.89636695,0.86760752,0.88467344])
     #weights = np.zeros(mod_size)
-    weights = np.random.uniform(low=-1.0,high=1.0,size=mod_size)
+
+    # weights = np.random.uniform(low=-1.0,high=1.0,size=mod_size)
 
     pos_phase = np.zeros(mod_size)
     neg_phase = np.zeros(mod_size)
@@ -91,30 +104,58 @@ if __name__ == '__main__':
     def prob(idx):
         return np.exp(-energy(Omega[idx,:]))
 
-    def update_state_space_prob():
-        global state_space_prob
+    def update_model_prob():
+        global model_prob
         part_fcn = 0
         for _J in range(state_space_size):
             unnorm_prob = prob(_J)
-            state_space_prob[_J] = unnorm_prob
+            model_prob[_J] = unnorm_prob
             part_fcn += unnorm_prob
 
-        state_space_prob = state_space_prob/part_fcn
+        model_prob = model_prob/part_fcn
 
 
     def calc_neg_phase(index):
         corr = 0
-        if index == mod_size - 1:
-            for I in range(state_space_size):
-                corr += Omega[I,index]*Omega[I,0]*state_space_prob[I]
-        else:
-            for I in range(state_space_size):
-                corr += Omega[I,index]*Omega[I,index+1]*state_space_prob[I]
+        for I in range(state_space_size):
+            corr += Omega[I, index] * Omega[I, (index+1) % mod_size] * model_prob[I]
 
         return corr
 
+    # Metropolis-Hastings
+    def next_state(x):
+        y_index = random.sample(range(state_space_size), k=1)[0]
+        y = Omega[y_index,:]
+        E_x = energy(x)
+        E_y = energy(y)
+        if E_y < E_x:
+            return y
+        else:
+            random_num = np.random.uniform(low=0.0, high=1.0)
+            if random_num < np.exp(E_x-E_y):
+                return y
+            else:
+                return x
+
+    # running Monte-Carlo until
+    def MC_run():
+        initial_index = random.sample(range(state_space_size), k=1)[0]
+        current_state = Omega[initial_index,:]
+        for L in range(MC_run_num):
+            current_state = next_state(current_state)
+            print(L, current_state)
+        return current_state
+
+    def calc_MC_neg_phase(index):
+        corr = 0
+        for I in range(state_space_size):
+            corr += Omega[I, index] * Omega[I, (index+1) % mod_size] * model_prob[I]
+
+        return corr
+
+
     def update_neg_phase():
-        update_state_space_prob()
+        update_model_prob()
         for J in range(mod_size):
             neg_phase[J] = calc_neg_phase(J)
 
@@ -124,37 +165,30 @@ if __name__ == '__main__':
         step = pos_phase-neg_phase
         weights = weights + step*learn_rate
 
-    # def KL_div():
-    #     sum = 0
-    #     for S in range(state_space_size):
+    def KL_div():
+        sum = 0
+        for S in range(state_space_size):
+            sum += train_prob[S]*np.log(train_prob[S]/model_prob[S])
+        return sum
 
 
 
 
-    def alt_calc_pos_phase(index):
-        corr = 0
-        if index == mod_size - 1:
-            for I in range(state_space_size):
-                corr += Omega[I,index]*Omega[I,0]*train_prob[I]
-        else:
-            for I in range(state_space_size):
-                corr += Omega[I,index]*Omega[I,index+1]*train_prob[I]
+    # print(pos_phase)
+    # print(np.array([-0.53999949,  0.4659995,   0.43599949,  0.4539995]))
+    # update_neg_phase()
+    # print(neg_phase)
 
-        return corr
+    print(MC_run())
 
-    alt_pos_phase = np.zeros(mod_size)
-    for alpha in range(mod_size):
-        alt_pos_phase[alpha]=alt_calc_pos_phase(alpha)
 
-    for L in range(N):
-        training_loop()
-        if L % 20 == 0:
-            print(f"N = {L}   {weights}")  #div = {KL_div}
-            print(f"pos_phase = {pos_phase}")
-            print(f"alt_pos_phase = {alt_pos_phase}")
-            print(f"neg_phase = {neg_phase}")
-
-    print(f"N = {N-1}   {weights}")  # div = {KL_div}
-    print(f"pos_phase = {pos_phase}")
-    print(f"alt_pos_phase = {alt_pos_phase}")
-    print(f"neg_phase = {neg_phase}")
+    # for L in range(N):
+    #     training_loop()
+    #     if L % 20 == 0:
+    #         print(f"N = {L}   {weights}   div = {KL_div()}")
+    #         print(f"pos_phase = {pos_phase}")
+    #         print(f"neg_phase = {neg_phase}")
+    #
+    # print(f"N = {N-1}   {weights}   div = {KL_div()}")  # div = {KL_div}
+    # print(f"pos_phase = {pos_phase}")
+    # print(f"neg_phase = {neg_phase}")
