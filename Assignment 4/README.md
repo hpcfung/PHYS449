@@ -10,7 +10,7 @@
 To run `main.py`, use
 
 ```sh
-python main.py
+python main.py data/in.txt
 ```
 
 ```sh
