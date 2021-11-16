@@ -246,6 +246,14 @@ if __name__ == '__main__':
     print("Final coupler values")
     print(couplers)
     print()
+    print("which rounds off to")
+    for _idx in range(mod_size):
+        if weights[_idx] > 0:
+            couplers[(_idx, _idx + 1 % mod_size)] = 1
+        else:
+            couplers[(_idx, _idx + 1 % mod_size)] = -1
+    print(couplers)
+    print()
     plt.plot(epochs,KL_history)
     plt.title("KL divergence of the training dataset wrt model during training")
     plt.xlabel('Training epochs')
