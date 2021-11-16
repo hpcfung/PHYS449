@@ -17,7 +17,7 @@ python main.py data/in.txt
 ```
 The program generates `KL_div_during_training.pdf` in the same directory.
 
-## json arguments
+## json parameters
 - Number of gd iterations: number of iterations of gradient descent during training
 - learning rate: scale factor for each step of the gradient descent
 - Number of iterations per MC simulation: number of steps in each Monte-Carlo simulation
