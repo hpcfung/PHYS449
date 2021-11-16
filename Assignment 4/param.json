@@ -1,0 +1,8 @@
+{
+	"Number of gd iterations": 100,
+	"learning rate": 1e-1,
+	"regularizer": 1e-16,
+	"Number of iterations per MC simulation": 100,
+	"Number of MC simulations": 100,
+	"verbosity": 2
+}
