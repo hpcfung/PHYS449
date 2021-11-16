@@ -10,7 +10,7 @@
 
 ## Running `main.py`
 
-Note that `param.json` should be placed in the same directory as `main.py`. To run `main.py`, use
+Note that `param.json` should be placed in the same directory as `main.py`, as well as the `data` folder, which should contain `in.txt`. To run `main.py`, use
 
 ```sh
 python main.py data/in.txt
