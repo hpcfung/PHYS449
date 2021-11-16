@@ -6,10 +6,11 @@
 - numpy
 - random
 - argparse
+- matplotlib
 
 ## Running `main.py`
 
-To run `main.py`, use
+Note that `param.json` should be placed in the same directory as `main.py`. To run `main.py`, use
 
 ```sh
 python main.py data/in.txt
@@ -29,3 +30,6 @@ python MCMC_gd_argparse.py -h
 - learning rate: scale factor for each step of the gradient descent
 - Number of iterations per MC simulation: number of steps in each Monte-Carlo simulation
 - Number of MC simulations: total number of Monte-Carlo simulations performed
+- verbosity: when the verbosity is `2` (the value in `param.json`), the program tracks the KL divergence of the
+training dataset with respect to your generative model during the training and
+save a plot of its values versus training epochs
