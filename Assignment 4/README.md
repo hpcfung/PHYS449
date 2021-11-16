@@ -15,9 +15,7 @@ Note that `param.json` should be placed in the same directory as `main.py`. To r
 ```sh
 python main.py data/in.txt
 ```
-```sh
-cd C:\Python_projects\PHYS 449\HW4
-```
+The program generates `KL_div_during_training.pdf` in the same directory.
 
 ## json arguments
 - Number of gd iterations: number of iterations of gradient descent during training
@@ -34,7 +32,9 @@ save a plot of its values versus training epochs
 To calculate the KL divergence <img src="https://render.githubusercontent.com/render/math?math=\mathrm{KL}(p|p_\lambda)=\sum_{x\in\Omega}p(x)\log{\frac{p(x)}{p_\lambda(x)}}=\sum_{x\in\Omega}p(x)\log{p(x)}-\sum_{x\in\Omega}p(x)\log{p_\lambda(x)}\approx\sum_{x\in\Omega}p_D(x)\log{p_D(x)}-\sum_{x\in\Omega}p_D(x)\log{p_\lambda(x)}">, we use the distribution <img src="https://render.githubusercontent.com/render/math?math=p_\lambda(x)"> obtained from the Monte-Carlo simulations. Note that it is possible that for <img src="https://render.githubusercontent.com/render/math?math=x\in\Omega"> such that <img src="https://render.githubusercontent.com/render/math?math=p_\lambda(x)\approx0">, it is possible that it does not show up in the Monte-Carlo simulations at all, then the distribution would predict <img src="https://render.githubusercontent.com/render/math?math=p_\lambda(x)=0">. If so, <img src="https://render.githubusercontent.com/render/math?math=p_D(x)\log{p_\lambda(x)}">
 becomes undefined.
 
-However, in that case, since <img src="https://render.githubusercontent.com/render/math?math=p_D(x)\approx p_\lambda(x)\approx0"> and <img src="https://render.githubusercontent.com/render/math?math=\lim_{p\rightarrow0}p\log{p}=0">, we have <img src="https://render.githubusercontent.com/render/math?math=p_D(x)\log{p_\lambda(x)}\approx p_D(x)\log{p_D(x)}\approx0">. ie we can ignore the contributions from these terms. Specifically, <img src="https://render.githubusercontent.com/render/math?math=p_D(x)\log{p_\lambda(x)}\approx p_D(x)\log{p_D(x)}"> cancels out the corresponding contribution in <img src="https://render.githubusercontent.com/render/math?math=\sum_{x\in\Omega}p_D(x)\log{p_D(x)}">.
+However, in that case, since <img src="https://render.githubusercontent.com/render/math?math=p_D(x)\approx p_\lambda(x)\approx0"> and <img src="https://render.githubusercontent.com/render/math?math=\lim_{p\rightarrow0}p\log{p}=0">, we have <img src="https://render.githubusercontent.com/render/math?math=p_D(x)\log{p_\lambda(x)}\approx p_D(x)\log{p_D(x)}\approx0">. ie we can ignore the contributions from these terms. Specifically, <img src="https://render.githubusercontent.com/render/math?math=p_D(x)\log{p_\lambda(x)}\approx p_D(x)\log{p_D(x)}"> cancels out the corresponding term in <img src="https://render.githubusercontent.com/render/math?math=\sum_{x\in\Omega}p_D(x)\log{p_D(x)}">.
+
+(If we ignore the <img src="https://render.githubusercontent.com/render/math?math=p_D(x)\log{p_\lambda(x)}"> term instead of doing a cancellation, then the KL-divergence becomes negative at times.)
 
 ### <img src="https://render.githubusercontent.com/render/math?math=L^2"> regularizer
 
