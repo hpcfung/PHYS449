@@ -33,7 +33,13 @@ Consider each <img src="https://render.githubusercontent.com/render/math?math=\l
 
 <img src="https://render.githubusercontent.com/render/math?math=p_\phi(x|z=\mu_\theta(x)%2B\sigma_\theta(x)\odot\epsilon^{(l)})=\prod_{n=1}^N\mathcal{N}(x_{(n)}|x_{\phi,(n)},\beta^{-1})">
 
-where <img src="https://render.githubusercontent.com/render/math?math=\beta^{-1}"> is the variance, assumed to be some fixed constant.
+where <img src="https://render.githubusercontent.com/render/math?math=\beta^{-1}"> is the variance, assumed to be some fixed constant. So the log likelihood is
+
+<img src="https://render.githubusercontent.com/render/math?math=\log{p_\phi(x|z=\mu_\theta(x)%2B\sigma_\theta(x)\odot\epsilon^{(l)})}=\sum_{n=1}^N\log{\mathcal{N}(x_{(n)}|x_{\phi,(n)},\beta^{-1})}=\frac{N}{2}\log{\beta}-\frac{N}{2}\log{2\pi}-\frac{\beta}{2}\sum_{n=1}^N(x_{(n)}-x_{\phi,(n)})^2">
+
+<img src="https://render.githubusercontent.com/render/math?math=\frac{N}{2}\log{\beta}-\frac{N}{2}\log{2\pi}"> does not depend on the weights of the decoder <img src="https://render.githubusercontent.com/render/math?math=\phi">, so we can drop it from the loss function.
+
+Note that the loss function can be scaled by any number, and the loss landscape would remain the same (ie the positions of the minima stay the same). Hence we scale <img src="https://render.githubusercontent.com/render/math?math=\mathcal{L}"> by <img src="https://render.githubusercontent.com/render/math?math=\frac{2}{\beta N}">, and the reconstruction likelihood term becomes <img src="https://render.githubusercontent.com/render/math?math=\frac{1}{L}\sum_{l=1}^L\frac{1}{N}\sum_{n=1}^N(x_{(n)}-x_{\phi,(n)})^2">, which is just the mean squared error.
 
 [^1]: Diederik P Kingma, Max Welling: “Auto-Encoding Variational Bayes”, 2013; <a href='http://arxiv.org/abs/1312.6114'>arXiv:1312.6114</a>.
 
