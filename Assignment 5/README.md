@@ -29,6 +29,11 @@ Using the law of large numbers, we can approximate <img src="https://render.gith
 
 <img src="https://render.githubusercontent.com/render/math?math=\mathbb{E}_\epsilon[\log{p_\phi(x|z=\mu_\theta(x)%2B\sigma_\theta(x)\odot\epsilon)}]\simeq\frac{1}{L}\sum_{l=1}^L\log{p_\phi(x|z=\mu_\theta(x)%2B\sigma_\theta(x)\odot\epsilon^{(l)})}">
 
+Consider each <img src="https://render.githubusercontent.com/render/math?math=\log{p_\phi(x|z=\mu_\theta(x)%2B\sigma_\theta(x)\odot\epsilon^{(l)})}">. The output <img src="https://render.githubusercontent.com/render/math?math=x"> is an image with <img src="https://render.githubusercontent.com/render/math?math=N=14\times14"> number of pixels. Let <img src="https://render.githubusercontent.com/render/math?math=x_\phi=x_\phi(z=\mu_\theta(x)%2B\sigma_\theta(x)\odot\epsilon^{(l)})"> be the output of the decoder, ie the predicted image, when its input is <img src="https://render.githubusercontent.com/render/math?math=z=\mu_\theta(x)%2B\sigma_\theta(x)\odot\epsilon^{(l)}">. Let <img src="https://render.githubusercontent.com/render/math?math=x_{(n)}"> and <img src="https://render.githubusercontent.com/render/math?math=x_{\phi,(n)}"> be the <img src="https://render.githubusercontent.com/render/math?math=n">th pixel in <img src="https://render.githubusercontent.com/render/math?math=x"> and <img src="https://render.githubusercontent.com/render/math?math=x_{\phi}"> respectively. Assume that the Gaussian noise at each pixel is independent of the noise at other pixels. Then the likelihood becomes
+
+<img src="https://render.githubusercontent.com/render/math?math=p_\phi(x|z=\mu_\theta(x)%2B\sigma_\theta(x)\odot\epsilon^{(l)})=\prod_{n=1}^N\mathcal{N}(x_{(n)}|x_{\phi,(n)},\beta^{-1})">
+
+where <img src="https://render.githubusercontent.com/render/math?math=\beta^{-1}"> is the variance, assumed to be some fixed constant.
 
 [^1]: Diederik P Kingma, Max Welling: “Auto-Encoding Variational Bayes”, 2013; <a href='http://arxiv.org/abs/1312.6114'>arXiv:1312.6114</a>.
 
