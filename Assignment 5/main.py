@@ -11,8 +11,7 @@ class MNISTDataset(torch.utils.data.Dataset):
         return self.raw_data.size()[0]
 
     def __getitem__(self, idx):
-        _2D_img = torch.reshape(self.raw_data[idx,:], (14, 14))
-        return torch.unsqueeze(_2D_img, 0)
+        return self.raw_data[idx,:]
 
 class Encoder(nn.Module):
     def __init__(self):
@@ -39,7 +38,7 @@ class Encoder(nn.Module):
     def forward(self, x1):
         raw_model_output = self.encode_layers(x1)
         _MEAN = raw_model_output[:,0:latent_dim]
-        _SD = torch.nn.functional.relu(raw_model_output[:,latent_dim:latent_dim*2])+1e-16
+        _SD = nn.functional.relu(raw_model_output[:,latent_dim:latent_dim*2])+1e-20
         # make sure the standard deviation is nonzero so that the Gaussian is well-defined
         return _MEAN, _SD
 
@@ -63,18 +62,24 @@ class Decoder(nn.Module):
         # sys.exit()
         return self.decode_layers(x2)
 
+def pre_processing(seqs):
+    current_batch_size = len(seqs)
+    _2D_img = torch.reshape(seqs, (current_batch_size,14,14))
+    return torch.unsqueeze(_2D_img,1)
+
 def tmp_plot(batch_pics):
     fig = plt.figure()
     for _I in range(len(batch_pics)):
         picture = torch.reshape(batch_pics[_I], (14, 14)).detach().cpu()
-        fig.add_subplot(10, 10, _I+1)
+        fig.add_subplot(10, 20, _I+1)
         plt.axis("off")
         plt.imshow(picture, cmap="gray")  # np.array(picture)
 
+# input of shape (batch size, channel = 1, 14, 14)
 def raw_plot(batch_pics):
     fig = plt.figure()
     for _I in range(len(batch_pics)):
-        picture = torch.reshape(torch.squeeze(batch_pics[_I], dim=1), (14, 14)).detach().cpu()
+        picture = torch.squeeze(batch_pics[_I], dim=0).detach().cpu()
         fig.add_subplot(10, 10, _I+1)
         plt.axis("off")
         plt.imshow(picture, cmap="gray")  # np.array(picture)
@@ -82,39 +87,72 @@ def raw_plot(batch_pics):
 # https://stats.stackexchange.com/questions/198362/how-to-define-a-2d-gaussian-using-1d-variance-of-component-gaussians
 # diagonal covariance = independent Gaussian
 
+def regularizer(_mean,_sd):
+    mean_sq = _mean ** 2
+    sd_sq = _sd ** 2
+    pre_sum = -torch.log(sd_sq)+mean_sq+sd_sq
+    pre_avg = torch.sum(pre_sum,1)
+    return torch.mean(pre_avg)
+
+
 def training():
-    for batch, img_batch in enumerate(train_dataloader):
-        # sample from standard Gaussian as per the re-parametrization trick
-        epsilon = torch.normal(0,1,size=(len(img_batch)*L,latent_dim))
-        print(epsilon.size())
+    for epoch in range(num_epoch):
+        print(f'epoch {epoch + 1}')
+        for batch, img_in_seq in enumerate(train_dataloader):
+            # sample from standard Gaussian as per the re-parametrization trick
+            epsilon = torch.normal(0, 1, size=(len(img_in_seq) * L, latent_dim))
+            # print(epsilon.size())
 
-        # tmp_plot(img)
-        # plt.show()
-        # print(img.size())
-        # raw_plot(img)
-        # plt.show()
+            # tmp_plot(img)
+            # plt.show()
+            # print(img.size())
+            # raw_plot(img)
+            # plt.show()
 
-        # print(model(img_batch).size())
-        mean,sd = model(img_batch)
-        print(mean.size())
-        print(sd.size())
+            # print(model(img_batch).size())
+            img_batch = pre_processing(img_in_seq)
+            # print(img_batch.size())
 
-        repeated_mean = mean.repeat(L,1)
-        repeated_sd = sd.repeat(L,1)
+            mean, sd = encoder_model(img_batch)
+            # print(mean.size())
+            # print(sd.size())
+            #
+            # print(mean)
+            # print(sd)
+            # print(epsilon)
 
-        print(repeated_mean.size())
-        print(repeated_sd.size())
+            repeated_mean = mean.repeat(L, 1)
+            repeated_sd = sd.repeat(L, 1)
 
-        # latent_vec =
+            # print(repeated_mean.size())
+            # print(repeated_sd.size())
 
+            latent_vec = repeated_mean + repeated_sd * epsilon
+            # print(latent_vec.size())
+            # print(latent_vec)
 
-        sys.exit()
+            recon_img_batch = decoder_model(latent_vec)
+            # print(recon_img_batch.size())
 
-        if batch % 100 == 0:
-            print(batch)
-            print(img.size())
+            # print(img_batch.size())
+            repeated_img_batch = img_in_seq.repeat(L, 1)
 
-    print('complete')
+            recon_loss = nn.functional.mse_loss(recon_img_batch, repeated_img_batch)
+            loss = recon_loss + _lambda * regularizer(mean, sd)
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            if batch % 100 == 0:
+                print(f"batch = {batch}   loss = {loss}")
+                # print(img.size())
+            if batch == 400:
+                print(recon_img_batch.size())
+                tmp_plot(recon_img_batch)
+                plt.show()
+                sys.exit()
+
 
 if __name__ == '__main__':
     device = torch.device("cpu")
@@ -124,10 +162,17 @@ if __name__ == '__main__':
     latent_dim = 4
     L = 3 # sample the same image L times to get a better estimate of the expectation value
 
+    learning_rate = 1e-3
+    _lambda = 1e-1
+    num_epoch = 2
+
     train_dataset = MNISTDataset()
     train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=Batch_size, shuffle=True)
 
-    model = Encoder().to(device)
+    encoder_model = Encoder().to(device)
+    decoder_model = Decoder().to(device)
+
+    optimizer = torch.optim.Adam(list(encoder_model.parameters()) + list(decoder_model.parameters()), lr=learning_rate)
 
     training()
 
