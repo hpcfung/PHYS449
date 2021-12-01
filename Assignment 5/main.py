@@ -1,5 +1,5 @@
 import numpy as np
-import torch, sys, json, os
+import torch, sys, json, os, argparse
 from torch import nn
 import matplotlib.pyplot as plt
 
@@ -78,15 +78,6 @@ def pre_processing(seqs):
     # CNN input is of the form (batch size, channels, height, width)
     return torch.unsqueeze(_2D_img,1)
 
-def tmp_plot(batch_pics):
-    fig = plt.figure()
-    for _I in range(len(batch_pics)):
-        picture = torch.reshape(batch_pics[_I], (14, 14)).detach().cpu()
-        fig.add_subplot(10, 20, _I+1)
-        plt.axis("off")
-        plt.imshow(picture, cmap="gray")  # np.array(picture)
-
-
 # https://stats.stackexchange.com/questions/198362/how-to-define-a-2d-gaussian-using-1d-variance-of-component-gaussians
 # diagonal covariance = independent Gaussian
 
@@ -99,6 +90,7 @@ def regularizer(_mean,_sd):
 
 
 def training():
+    train_lost_history = []
     for epoch in range(num_epoch):
         train_loss_per_batch = []
         for batch, img_in_seq in enumerate(train_dataloader):
@@ -127,6 +119,7 @@ def training():
             optimizer.step()
 
         train_loss = sum(train_loss_per_batch)/len(train_loss_per_batch)
+        train_lost_history.append(train_loss)
         if calc_test_loss:
             for batch2, img_in_seq2 in enumerate(test_dataloader):
                 epsilon2 = torch.normal(0, 1, size=(len(img_in_seq2) * L, latent_dim)).to(device)
@@ -149,27 +142,54 @@ def training():
                 print(f"epoch = {epoch + 1}   training loss = {train_loss}   testing loss = {test_loss}")
         else:
             print(f"epoch = {epoch + 1}   training loss = {train_loss}")
-        # print(img.size())
-    # if batch == 400:
-    #     print(recon_img_batch.size())
-    #     tmp_plot(recon_img_batch)
-    #     plt.show()
-    #     sys.exit()
+
+    print(f"\nTraining complete")
+    plt.plot(np.arange(1,num_epoch+1),train_lost_history)
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.savefig(results_path + '/loss.pdf')
 
 def testing():
-    latent_vec = torch.normal(0,3,size=(200,latent_dim)).to(device)
+    print(f"Generating plots")
+    latent_vec = torch.normal(0,3,size=(num_plots,latent_dim)).to(device)
     generated_img_batch = decoder_model(latent_vec)
     tmp_plot(generated_img_batch)
-    plt.show()
+
+def tmp_plot(batch_pics):
+    for _I in range(len(batch_pics)):
+        # plt.figure()
+        picture = torch.reshape(batch_pics[_I], (14, 14)).detach().cpu()
+        plt.axis("off")
+        plt.imshow(picture, cmap="gray")
+        plt.savefig(results_path +'/'+str(_I+1)+ '.pdf')
+        # plt.clf()
+        if (_I+1)%10==0:
+            print(f"{_I+1} digits sampled")
 
 if __name__ == '__main__':
     # set this to cpu at the end
-    device = torch.device("cuda")
+    device = torch.device("cpu")
+
+    # Command line arguments
+    parser = argparse.ArgumentParser(description='Using a variational auto-encoder (VAE) to learn '
+                                                 'to write even numbers')
+    parser.add_argument('-o', type=str, default='result_dir',
+                        help='folder where the result files are stored in')
+    parser.add_argument('-n', type=int, default=100, help='number of sampled digit images')
+    # parser.add_argument('-n', type=int, default=100, help='verbosity (default: 1)')
+
+    args = parser.parse_args()
+
+    # print(args.o)
+    # print(args.n)
+    # sys.exit()
 
     # generates the folder in which the results will be stored
-    results_path = 'result_dir'
+    results_path = args.o # 'result_dir'
     if not os.path.exists(results_path):
         os.makedirs(results_path)
+
+    num_plots = 5
 
     # read json file
     g = open('param.json')
@@ -199,3 +219,4 @@ if __name__ == '__main__':
 
     training()
     testing()
+    print("All plots generated, program is complete")
