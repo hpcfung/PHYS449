@@ -10,7 +10,11 @@
 To run `main.py`, use
 
 ```sh
-python main.py
+python main.py -o result_dir -n 100
+```
+Debug:
+```
+cd C:\Python_projects\PHYS 449\HW5
 ```
 
 ## Derivation of the Loss Function
