@@ -1,0 +1,9 @@
+{
+	"Batch size": 64,
+	"Latent dimension": 2,
+	"L": 3,
+	"Learning rate": 1e-3,
+	"Regularizer": 1,
+	"Number of epochs": 50,
+	"verbosity": 2
+}
